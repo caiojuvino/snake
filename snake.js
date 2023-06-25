@@ -28,17 +28,25 @@ let frame = 0;
 let skipframes = 6;
 let shouldGrow = false;
 let isPaused = true;
+let hasMoved = true;
 
 window.addEventListener("keydown", (e) => {
+    if (!hasMoved) {
+        return
+    }
     
     if (e.code === "ArrowDown" && way != direction.UP) {
         way = direction.DOWN
+        hasMoved = false;
     } else if (e.code === "ArrowLeft" && way != direction.RIGHT) {
         way = direction.LEFT
+        hasMoved = false;
     } else if (e.code === "ArrowUp" && way != direction.DOWN) {
         way = direction.UP
+        hasMoved = false;
     } else if (e.code === "ArrowRight" && way != direction.LEFT) {
         way = direction.RIGHT
+        hasMoved = false;
     } else if (e.code === "Space") {
         isPaused = !isPaused;
         if (isPaused) {
@@ -77,8 +85,8 @@ function loop() {
                 moveLeft();
                 break;
         }
-        checkBounds();
-        if(isFoodInPiece(snake[0])){
+        checkCollision();
+        if(isPosInPiece(food.x, food.y, snake[0])){
             shouldGrow = true;
             setRandomFoodPosition();
         }
@@ -94,6 +102,7 @@ function writeTip(){
 
 function updateSnake(x,y){
     snake.unshift([x, y]);
+    hasMoved = true;
     
     if(!shouldGrow){
         snake.pop();
@@ -114,10 +123,15 @@ function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1) ) + min;
 }
 
-function isFoodInSnake() {
+function isPosInPiece(x, y, piece){
+    return piece[0] == x && piece[1] == y;
+}
+
+function isPosInSnake(x, y, isFood) {
     let eaten = false;
-    for (let i = 0; i < snake.length; i++) {
-        if (isFoodInPiece(snake[i])){
+    let i = isFood ? 0 : 1;
+    for (; i < snake.length; i++) {
+        if (isPosInPiece(x, y, snake[i])){
             return true;
         }
     }
@@ -127,7 +141,7 @@ function isFoodInSnake() {
 function setRandomFoodPosition(){
     let tempX = food.x;
     let tempY = food.y;
-    while (isFoodInSnake() || (tempX == food.x && tempY == food.y)){
+    while (isPosInSnake(food.x, food.y, true) || (tempX == food.x && tempY == food.y)){
         food.x = getRandomInt(0, canvas.width/UNIT - 1) * UNIT;
         food.y = getRandomInt(0, canvas.height/UNIT - 1) * UNIT;
     }
@@ -138,17 +152,16 @@ function drawFood(){
     context.fillRect(food.x, food.y, UNIT-GAP, UNIT-GAP);
 }
 
-function isFoodInPiece(piece){
-    return piece[0] == food.x && piece[1] == food.y;
-}
-
-function checkBounds(){
+function checkCollision(){
     if(
         (snake[0][0] + UNIT > canvas.width && way == direction.RIGHT) ||
         (snake[0][1] + UNIT > canvas.height && way == direction.DOWN) ||
         (snake[0][0] < 0 && way == direction.LEFT) ||
-        (snake[0][1] < 0 && way == direction.UP)) {
+        (snake[0][1] < 0 && way == direction.UP) ||
+        isPosInSnake(snake[0][0], snake[0][1], false)) {
         resetSnake();
+        isPaused = true;
+        writeTip();
     }
 }
 
